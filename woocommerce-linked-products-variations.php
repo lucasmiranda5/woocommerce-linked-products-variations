@@ -1,16 +1,16 @@
 <?php
 /**
- * Plugin Name: Woocommerce Plugin Teste
- * Plugin URI: https://gist.github.com/BFTrick/091d55feaaef0c5341d8
- * Description: A plugin demonstrating how to add a new WooCommerce integration.
- * Author: Patrick Rauland
- * Author URI: http://speakinginbytes.com/
- * Version: 1.0
+ * Plugin Name: woocommerce-linked-products-variations
+ * Plugin URI: https://github.com/lucasmiranda5/woocommerce-linked-products-variations
+ * Description: Plugin for linked differents products how variations.
+ * Author: Lucas Miranda
+ * Author URI: http://lucasmiranda.com.br
+ * Version: 0.1
  */
 
-if ( ! class_exists( 'WC_plugin_teste' ) ) :
+if ( ! class_exists( 'WC_woocommerce_linked_products_variations' ) ) :
 
-	class WC_plugin_teste {
+	class WC_woocommerce_linked_products_variations {
 
 	private static $instance;
 
@@ -177,5 +177,5 @@ if ( ! class_exists( 'WC_plugin_teste' ) ) :
 	
 }
 
-add_action( 'plugins_loaded', array( 'WC_plugin_teste', 'get_instance' ) );
+add_action( 'plugins_loaded', array( 'WC_woocommerce_linked_products_variations', 'get_instance' ) );
 endif;
