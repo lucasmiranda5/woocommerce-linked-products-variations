@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: woocommerce-linked-products-variations
+ * Plugin Name: Woocommerce Linked Products Variations
  * Plugin URI: https://github.com/lucasmiranda5/woocommerce-linked-products-variations
  * Description: Plugin for linked differents products how variations.
  * Author: Lucas Miranda
@@ -16,15 +16,43 @@ if ( ! class_exists( 'WC_woocommerce_linked_products_variations' ) ) :
 
 	private function __construct() {
 		// Checks if WooCommerce is installed.
-		add_filter( 'woocommerce_product_data_tabs', array( $this, 'lucas_add_product_data_tabs' ) );
-		add_action( 'woocommerce_product_data_panels',  array( $this, 'lucas_product_data_fields' ) );
+		add_filter( 'woocommerce_product_data_tabs', array( $this, 'add_product_data_tabs' ) );
+		add_action( 'woocommerce_product_data_panels',  array( $this, 'product_data_fields' ) );
 		$this->define_admin_hooks();
-		add_action( 'woocommerce_single_product_summary', array($this,'mostrar_no_produto'), 20 );
-
+		add_action( 'woocommerce_single_product_summary', array($this,'show_in_product'), 20 );
+		add_action( 'admin_enqueue_scripts', array($this,'load_custom_wp_admin_script') );
 
 	}
 
-	function mostrar_no_produto(){
+    public static function get_instance() {
+        if ( null == self::$instance ) {
+            self::$instance = new self;
+        }
+
+        return self::$instance;
+    }
+
+    public function load_custom_wp_admin_script() {
+            wp_register_script( 'woocommerce_linked_products_variations_js', plugins_url('js/woocommerce_linked_products_variations.js',__FILE__), false, '1.0.0' );
+            wp_enqueue_script( 'woocommerce_linked_products_variations_js' );
+    }
+    
+
+    private function define_admin_hooks() {
+        add_action( 'save_post', array( $this, 'save_variation_settings_fields' ), 10, 2 );
+    }
+
+    public function add_product_data_tabs( $product_data_tabs  ) {
+    $product_data_tabs['linkar-produtos'] = array(
+      'label'  => esc_attr__( 'Linkar Produtos', 'woocommerce_linked_products_variations' ),
+      'target' => 'linkarproduto_variacao',
+      'class'  => array('show_if_simple' ),
+
+    );
+    return $product_data_tabs;
+  }
+
+	public function show_in_product(){
 		global $woocommerce, $post;
 		print "
 		<style>
@@ -33,42 +61,24 @@ if ( ! class_exists( 'WC_woocommerce_linked_products_variations' ) ) :
 	    $formavariacao = get_post_meta( $post->ID, 'woocoomerce_linkar_produto_formavariacao', true );
 	    $produtos = get_post_meta( $post->ID, 'woocoomerce_linkar_produto_produtos', true );
 	    $produtosnome = get_post_meta( $post->ID, 'woocoomerce_linkar_produto_produtosnome', true );
-	    foreach($nomesvariacao as $key => $valor){
-	    	print "<span>".$valor.': </span><br>';
-	    	foreach($produtos[$key] as $key2 => $valor2) {
-	    		if($formavariacao[$key] == 'nome')
-	    			print "<a class='linkvariacaolinkar' href='".get_permalink($valor2)."'>".$produtosnome[$key][$key2]."</a>";
-	    		else
-	    			print "<a class='linkvariacaolinkar' href='".get_permalink($valor2)."'><img src='".get_the_post_thumbnail_url($valor2)."' style='width:90px'></a>";
-	    		
-	    	}
-	    	print "<br>";
-	    }
-	}
-	public static function get_instance() {
-		// If the single instance hasn't been set, set it now.
-		if ( null == self::$instance ) {
-			self::$instance = new self;
+	    if(!empty($nomesvariacao) and $nomesvariacao[0] != ''){
+		    foreach($nomesvariacao as $key => $valor){
+		    	print "<span>".$valor.': </span><br>';
+		    	foreach($produtos[$key] as $key2 => $valor2) {
+		    		if($formavariacao[$key] == 'nome')
+		    			print "<a class='linkvariacaolinkar' href='".get_permalink($valor2)."'>".$produtosnome[$key][$key2]."</a>";
+		    		else
+		    			print "<a class='linkvariacaolinkar' href='".get_permalink($valor2)."'><img src='".get_the_post_thumbnail_url($valor2)."' style='width:90px'></a>";
+		    		
+		    	}
+		    	print "<br>";
+		    }
 		}
-
-		return self::$instance;
+		
 	}
-	private function define_admin_hooks() {
-    	add_action( 'save_post', array( $this, 'lucas_save_variation_settings_fields' ), 10, 2 );
-    	//add_action( 'admin_enqueue_scripts', array( $this, 'simplewlv_enqueue_backend_scripts' ) );
-  	}
+	
 
-	public function lucas_add_product_data_tabs( $product_data_tabs  ) {
-    $product_data_tabs['linkar-produtos'] = array(
-      'label'  => esc_attr__( 'Linkar Produtos', 'simplewlv' ),
-      'target' => 'linkarproduto_variacao',
-      'class'  => array('show_if_simple' ),
-
-    );
-    return $product_data_tabs;
-  }
-
-  public function lucas_product_data_fields() {
+  public function product_data_fields() {
     global $woocommerce, $post;
     $nomesvariacao = get_post_meta( $post->ID, 'woocoomerce_linkar_produto_nomevaraiacao', true );
     $formavariacao = get_post_meta( $post->ID, 'woocoomerce_linkar_produto_formavariacao', true );
@@ -130,41 +140,11 @@ if ( ! class_exists( 'WC_woocommerce_linked_products_variations' ) ) :
 		<input type="hidden" id="quantidadelinkar" value="<?=$key+1?>">
 			<button type="button" class="add-mais">Adicionar Mais Variação</button>      
     </div>
-    <script type="text/javascript">
-    	jQuery.fn.addmaisproduto = function(){
-    		jQuery('.add-mais-produto').click(function(){
-    			variacao = jQuery(this).attr('data-variacao');
-    			produto = jQuery(this).attr('data-produto');
-    			html = '<p class="form-field"><label for="">Produto <spam style="font-weight: bold;color: red;" class="excluirprodutovariacao">X</spam></label><select class="wc-product-search" style="width: 50%;" name="linkarprodutos['+variacao+']['+produto+']" data-placeholder="Procurar Produto" data-action="woocommerce_json_search_products_and_variations" data-exclude="'+jQuery('#primeiroinputlinkar').attr('data-exclude')+'"></select><input type="text" class="short" style="" name="linkarprodutonome['+variacao+']['+produto+']" value="" placeholder="Nome que irar aparecer"></p>';
-    			jQuery(this).attr('data-produto',parseInt(produto) + 1);
-    			jQuery(html).insertBefore(this);
-    			jQuery( document.body).trigger( 'wc-enhanced-select-init' );
-    			jQuery('.divvariacao').addmaisproduto();
-    		});
-    		jQuery('.excluirvariacao').click(function() {
-    			$(this).parents('.divvariacao').remove();
-    		});
-    		jQuery('.excluirprodutovariacao').click(function() {
-    			$(this).parents('p').remove();
-    		});
-    	}
-    	jQuery(function(){
-    		jQuery('.divvariacao').addmaisproduto();
-    		jQuery('.add-mais').click(function(){
-    			produto = jQuery('#quantidadelinkar').val();
-    			html = '<div class="divvariacao"><p class="form-field nome_variacao_fild "><label for="minimum_amount">Nome da Variação <spam style="font-weight: bold;color: red;" class="excluirvariacao">X</spam></label><input type="text" class="short" style="" name="nomevariacao['+produto+']" id="nomevariacao" value="" placeholder="Nome da Variação"> </p><p class="form-field nome_variacao_fild "><label for="minimum_amount">Forma de aparecer</label><select name="formavariacao['+produto+']"><option value="nome">Nome</option><option value="foto">Foto</option></select></p><p class="form-field"><label for="">Produto <spam style="font-weight: bold;color: red;" class="excluirprodutovariacao">X</spam></label><select class="wc-product-search" style="width: 50%;" name="linkarprodutos['+produto+'][0]" data-placeholder="Procurar Produto" data-action="woocommerce_json_search_products_and_variations" data-exclude="'+jQuery('#primeiroinputlinkar').attr('data-exclude')+'"></select><input type="text" class="short" style="" name="linkarprodutonome['+produto+'][0]" value="" placeholder="Nome que irar aparecer"></p><button type="button" class="add-mais-produto" data-produto="1" data-variacao="'+produto+'">Adicionar Mais Produto</button></div>';
-    			jQuery('#quantidadelinkar').val(parseInt(produto) + 1);
-    			jQuery(html).insertBefore(this);
-    			jQuery('.divvariacao').addmaisproduto();
-    			jQuery( document.body).trigger( 'wc-enhanced-select-init' );
-    		})
-    	})
-    </script>
 
     <?php
   }
 
-   public function lucas_save_variation_settings_fields( $post_id ) {
+   public function save_variation_settings_fields( $post_id ) {
       update_post_meta( $post_id, 'woocoomerce_linkar_produto_nomevaraiacao', $_POST['nomevariacao'] );
       update_post_meta( $post_id, 'woocoomerce_linkar_produto_formavariacao', $_POST['formavariacao'] );
       update_post_meta( $post_id, 'woocoomerce_linkar_produto_produtos', $_POST['linkarprodutos'] );
